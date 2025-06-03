@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QTableWidget, QTableWidgetItem, QLabel, QLineEdit, 
-                            QMessageBox, QCalendarWidget, QDialog, QComboBox)
+                            QMessageBox, QCalendarWidget, QDialog, QComboBox, 
+                            QFileDialog)
 from PyQt5.QtCore import Qt, QDate, pyqtSignal
 from PyQt5.QtGui import QFont
 from db_connection import Database, DatabaseError
 from datetime import datetime, timedelta
 from billing_module import BillPreviewDialog, BillingModule
+import pandas as pd
 
 class DatePickerDialog(QDialog):
     def __init__(self, parent=None):
@@ -98,6 +100,13 @@ class SearchModule(QWidget):
             self.bill_type_filter.addItem("Non-GST")
             filter_layout.addWidget(QLabel("Bill Type:"))
             filter_layout.addWidget(self.bill_type_filter)
+            
+            # Download button (visible only for GST filter? Or check inside handler?)
+            self.download_button = QPushButton("Download GST Bills")
+            self.download_button.setFont(QFont('Arial', 12))
+            self.download_button.clicked.connect(self.download_gst_bills)
+            filter_layout.addWidget(self.download_button)
+            
             layout.addLayout(filter_layout)
             self.bill_type_filter.currentIndexChanged.connect(self.search_bills)
             
@@ -161,6 +170,8 @@ class SearchModule(QWidget):
             elif bill_type == "Non-GST":
                 bills = [b for b in bills if b.get('bill_type', '').lower() == 'non-gst']
             
+            self.current_bills = bills
+
             for row, bill in enumerate(bills):
                 items_text = ", ".join([f"{item['model']}({item['quantity']})" for item in bill['items']])
                 self.table.insertRow(row)
@@ -247,4 +258,48 @@ class SearchModule(QWidget):
         except DatabaseError as e:
             QMessageBox.critical(self, "Database Error", str(e))
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to show bill details: {str(e)}") 
+            QMessageBox.critical(self, "Error", f"Failed to show bill details: {str(e)}")
+    
+    def download_gst_bills(self):
+        try:
+            if self.bill_type_filter.currentText() != "GST":
+                QMessageBox.warning(self, "Warning", "Download is only available for GST bills.")
+                return
+                
+            if not hasattr(self, 'current_bills') or not self.current_bills:
+                 QMessageBox.warning(self, "Warning", "No GST bills to download.")
+                 return
+            
+            # Filter for GST bills explicitly (redundant if filter is checked, but safe)
+            gst_bills = [bill for bill in self.current_bills if bill.get('bill_type', '').lower() == 'gst']
+            
+            if not gst_bills:
+                QMessageBox.warning(self, "Warning", "No GST bills found for download based on current search criteria.")
+                return
+
+            # Prepare data for DataFrame - select only the required fields
+            data = []
+            for bill in gst_bills:
+                 data.append({
+                    'invoice_number': bill.get('invoice_number'),
+                    'customer_name': bill.get('customer_name'),
+                    'customer_gstin': bill.get('customer_gstin',''),
+                    'date': bill.get('date').strftime('%Y-%m-%d') if bill.get('date') else '',
+                    'gst_percent': bill.get('gst_percent', 0),
+                    'subtotal': bill.get('subtotal', 0),
+                    'cgst': bill.get('cgst', 0),
+                    'sgst': bill.get('sgst', 0),
+                    'total': bill.get('total', 0)
+                 })
+            
+            df = pd.DataFrame(data)
+
+            # Get save file path from user
+            filePath, _ = QFileDialog.getSaveFileName(self, "Save GST Bills", "GST_Bills.xlsx", "Excel Files (*.xlsx);;All Files (*)")
+            
+            if filePath:
+                df.to_excel(filePath, index=False)
+                QMessageBox.information(self, "Success", f"GST bills saved to {filePath}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to download GST bills: {str(e)}") 
