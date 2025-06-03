@@ -9,6 +9,7 @@ from db_connection import Database, DatabaseError
 from datetime import datetime
 import os
 import math
+import sys
 
 class BillPreviewDialog(QDialog):
     def __init__(self, bill_data, parent=None):
@@ -95,6 +96,17 @@ class BillPreviewDialog(QDialog):
                 result += " and " + convert_less_than_thousand(paise) + " Paise"
             return result
         amount_in_words = number_to_words(bill['total'])
+        
+        # Get the correct path for the logo image
+        if getattr(sys, 'frozen', False):
+            # If the application is run as a bundle
+            application_path = sys._MEIPASS
+        else:
+            # If the application is run from a Python interpreter
+            application_path = os.path.dirname(os.path.abspath(__file__))
+            
+        logo_path = os.path.join(application_path, 'Amaron-Logo.png').replace('\\', '/') # Use forward slashes for HTML
+
         html = f"""
         <div style='font-family: Arial; font-size: 14px; padding: 24px;'>
             <table width='800' style=' border-collapse: collapse; margin-bottom: 0;'>
@@ -109,7 +121,7 @@ class BillPreviewDialog(QDialog):
                         <div style='font-size: 13px;'>GSTIN: {shop_gstin}</div>
                         <div style='font-size: 13px;'>{shop_contact}</div>
                         <div style='font-size: 13px; margin-top: 8px;'>Authorised Dealer:     </div><br>
-                        <img src='Amaron-Logo.png' width='160' height='40' style='object-fit: contain;'>
+                        <img src='{logo_path}' width='160' height='40' style='object-fit: contain;'>
                     </td>
                 </tr>
             </table>
