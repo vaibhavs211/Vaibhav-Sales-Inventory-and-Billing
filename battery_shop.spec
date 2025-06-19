@@ -58,7 +58,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='Vaibhav Sales',  # your .exe name
+    name='Battery Shop',  # your .exe name
     onefile=True,
     debug=False,
     bootloader_ignore_signals=False,
