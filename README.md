@@ -101,5 +101,3 @@ Follow these steps to get the project up and running on your local machine:
 
 > **Contributions welcome!**
 > Feel free to open issues for bugs or feature requests, and submit pull requests with improvements.
-
-```
