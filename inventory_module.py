@@ -4,6 +4,9 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 from db_connection import Database, DatabaseError
+from dotenv import load_dotenv
+import sys
+import os
 
 class ButtonDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -136,7 +139,18 @@ class InventoryModule(QWidget):
                 "Enter admin password:",
                 QLineEdit.Password
             )
-            if ok and password == "Singhavi18":
+            # Get the correct path for .env file
+            if getattr(sys, 'frozen', False):
+                # If the application is run as a bundle
+                application_path = sys._MEIPASS
+            else:
+                # If the application is run from a Python interpreter
+                application_path = os.path.dirname(os.path.abspath(__file__))
+
+            # Load .env file from the correct location
+            env_path = os.path.join(application_path, '.env')
+            load_dotenv(env_path)
+            if ok and password == (os.getenv('PASS')):
                 self.is_admin = True
                 self.admin_btn.setText("Admin Logout")
                 self.add_model_btn.setVisible(True)
